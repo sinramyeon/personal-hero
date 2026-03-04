@@ -11,46 +11,47 @@ function getSteps(L) {
 }
 
 function compressImage(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => {
-      try {
+      const canvas = document.createElement("canvas");
+      const MAX = 400;
+      let w = img.width, h = img.height;
+      if (w > MAX || h > MAX) {
+        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+        else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.4);
+      URL.revokeObjectURL(img.src);
+      resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      // canvas 실패 시 → createImageBitmap으로 재시도 (HEIC 지원)
+      createImageBitmap(file).then((bmp) => {
         const canvas = document.createElement("canvas");
         const MAX = 400;
-        let w = img.width, h = img.height;
+        let w = bmp.width, h = bmp.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
           else { w = Math.round(w * MAX / h); h = MAX; }
         }
         canvas.width = w; canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.4); 
-        URL.revokeObjectURL(img.src);
+        canvas.getContext("2d").drawImage(bmp, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.4);
         resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
-      } catch (e) {
-        URL.revokeObjectURL(img.src);
-        fallbackRead(file).then(resolve).catch(reject);
-      }
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(img.src);
-      fallbackRead(file).then(resolve).catch(reject);
+      }).catch(() => {
+        // 최후 수단: FileReader지만 리사이즈 불가 → 스킵
+        console.error("Cannot compress:", file.name);
+        resolve(null);
+      });
     };
     img.src = URL.createObjectURL(file);
   });
 }
 
-function fallbackRead(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result.split(",")[1];
-      resolve({ base64, mediaType: file.type || "image/jpeg" });
-    };
-    reader.onerror = () => reject(new Error("Failed to read file"));
-    reader.readAsDataURL(file);
-  });
-}
 
 export default function PhotoUpload({ onAnalyze, lang }) {
   const L = i18n[lang];
@@ -88,11 +89,15 @@ export default function PhotoUpload({ onAnalyze, lang }) {
     setLoading(true);
     try {
       const images = {};
-      for (const s of STEPS) images[s.key] = await Promise.all(allPhotos[s.key].map(compressImage));
+      for (const s of STEPS) {
+        const results = await Promise.all(allPhotos[s.key].map(compressImage));
+        images[s.key] = results.filter(Boolean);  // null 제거
+      }
       await onAnalyze(images);
     } catch (err) { alert(L.uploadError + err.message); }
     finally { setLoading(false); }
   };
+  
   const canNext = photos.length >= current.min;
   const isLast = step === STEPS.length - 1;
 
