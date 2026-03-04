@@ -12,23 +12,45 @@ function getSteps(L) {
 
 function compressImage(file) {
   return new Promise((resolve, reject) => {
+    // 먼저 canvas 압축 시도
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const MAX = 800;
-      let w = img.width, h = img.height;
-      if (w > MAX || h > MAX) {
-        if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-        else { w = Math.round(w * MAX / h); h = MAX; }
+      try {
+        const canvas = document.createElement("canvas");
+        const MAX = 800;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        URL.revokeObjectURL(img.src);
+        resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
+      } catch (e) {
+        URL.revokeObjectURL(img.src);
+        fallbackRead(file).then(resolve).catch(reject);
       }
-      canvas.width = w; canvas.height = h;
-      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
-      URL.revokeObjectURL(img.src);
-      resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
     };
-    img.onerror = () => { URL.revokeObjectURL(img.src); reject(new Error("fail")); };
+    img.onerror = () => {
+      URL.revokeObjectURL(img.src);
+      // canvas 실패 시 FileReader로 원본 base64 전송
+      fallbackRead(file).then(resolve).catch(reject);
+    };
     img.src = URL.createObjectURL(file);
+  });
+}
+
+function fallbackRead(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const base64 = reader.result.split(",")[1];
+      resolve({ base64, mediaType: file.type || "image/jpeg" });
+    };
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.readAsDataURL(file);
   });
 }
 
