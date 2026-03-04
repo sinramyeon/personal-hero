@@ -16,7 +16,7 @@ function compressImage(file) {
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        const MAX = 600;  // 800 → 600으로 줄임
+        const MAX = 400;
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -24,7 +24,7 @@ function compressImage(file) {
         }
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.5); 
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.4); 
         URL.revokeObjectURL(img.src);
         resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
       } catch (e) {
