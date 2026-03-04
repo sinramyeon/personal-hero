@@ -12,12 +12,11 @@ function getSteps(L) {
 
 function compressImage(file) {
   return new Promise((resolve, reject) => {
-    // 먼저 canvas 압축 시도
     const img = new Image();
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
-        const MAX = 800;
+        const MAX = 600;  // 800 → 600으로 줄임
         let w = img.width, h = img.height;
         if (w > MAX || h > MAX) {
           if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
@@ -25,7 +24,7 @@ function compressImage(file) {
         }
         canvas.width = w; canvas.height = h;
         canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        const dataUrl = canvas.toDataURL("image/jpeg", 0.8);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.5); 
         URL.revokeObjectURL(img.src);
         resolve({ base64: dataUrl.split(",")[1], mediaType: "image/jpeg" });
       } catch (e) {
@@ -35,7 +34,6 @@ function compressImage(file) {
     };
     img.onerror = () => {
       URL.revokeObjectURL(img.src);
-      // canvas 실패 시 FileReader로 원본 base64 전송
       fallbackRead(file).then(resolve).catch(reject);
     };
     img.src = URL.createObjectURL(file);
@@ -149,3 +147,4 @@ export default function PhotoUpload({ onAnalyze, lang }) {
     </div>
   );
 }
+
