@@ -1,87 +1,24 @@
-import Anthropic from "@anthropic-ai/sdk";
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+export const config = { maxDuration: 120 };
+
+import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
-import { SYSTEM_PROMPT } from "./prompt.js";
-
-dotenv.config({ path: ".env.local" });
-
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: "50mb" }));
-
-const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 async function toJpeg(base64Data) {
   const buf = Buffer.from(base64Data, "base64");
   const out = await sharp(buf)
-    .jpeg({ quality: 85 })
-    .resize({ width: 1200, height: 1200, fit: "inside", withoutEnlargement: true })
+    .jpeg({ quality: 90 })
+    .resize({ width: 800, height: 800, fit: "inside", withoutEnlargement: true })
     .toBuffer();
   return out.toString("base64");
 }
 
-async function addImages(content, label, imgs) {
-  content.push({ type: "text", text: label });
-  for (const img of imgs) {
-    try {
-      const jpg = await toJpeg(img.base64);
-      content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: jpg } });
-    } catch (e) {
-      console.error("Image convert failed:", e.message);
-    }
-  }
-}
-
-app.post("/api/analyze", async (req, res) => {
-  try {
-    const { images } = req.body;
-    if (!images || !images.face || !images.body || !images.outfit) {
-      return res.status(400).json({ error: "Missing image categories" });
-    }
-
-    const content = [];
-    await addImages(content, "=== FACE PHOTOS (for personal color analysis) ===", images.face);
-    await addImages(content, "=== FULL BODY PHOTOS (for body type analysis) ===", images.body);
-    await addImages(content, "=== FAVORITE OUTFIT PHOTOS (for style preference analysis) ===", images.outfit);
-    content.push({ type: "text", text: "Analyze all the photos above and return the JSON result." });
-
-    const n = content.filter(c => c.type === "image").length;
-    console.log("Sending", n, "converted JPEG images to Claude...");
-    if (n === 0) return res.status(400).json({ error: "No valid images after conversion" });
-
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 2000,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content }],
-    });
-
-    const text = response.content[0].text;
-    console.log("Claude response:", text.substring(0, 200));
-
-    let result;
-    try { result = JSON.parse(text); } catch {
-      const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-      result = m ? JSON.parse(m[1]) : JSON.parse(text.trim());
-    }
-    res.json({ result });
-  } catch (err) {
-    console.error("Analysis error:", err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// --- Lookbook generation ---
-import { GoogleGenAI } from "@google/genai";
-
-function buildLookPrompts(analysisResult, lang) {
+function buildPrompts(analysisResult, lang) {
   const kr = lang === "kr";
-  const { personalColor, bodyType } = analysisResult;
+  const { personalColor, bodyType, styleRecommendation } = analysisResult;
   const season = personalColor?.season || "";
   const bodyDesc = bodyType?.type || "";
   const bestColors = personalColor?.bestColors?.join(", ") || "";
+
   const baseContext = `This person's personal color is ${season}, body type is ${bodyDesc}. Their best colors are: ${bestColors}.`;
 
   const seasons = kr
@@ -110,7 +47,9 @@ function buildLookPrompts(analysisResult, lang) {
   return prompts;
 }
 
-app.post("/api/generate-looks", async (req, res) => {
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
   try {
     const { faceImages, analysisResult, lang } = req.body;
     if (!faceImages?.length || !analysisResult) {
@@ -118,8 +57,9 @@ app.post("/api/generate-looks", async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const prompts = buildLookPrompts(analysisResult, lang || "kr");
+    const prompts = buildPrompts(analysisResult, lang || "kr");
 
+    // Prepare reference face images
     const refImages = [];
     for (const img of faceImages.slice(0, 3)) {
       try {
@@ -129,12 +69,17 @@ app.post("/api/generate-looks", async (req, res) => {
         console.error("Face image convert failed:", e.message);
       }
     }
-    if (refImages.length === 0) return res.status(400).json({ error: "No valid face images" });
 
-    console.log(`Generating ${prompts.length} lookbook images...`);
+    if (refImages.length === 0) {
+      return res.status(400).json({ error: "No valid face images" });
+    }
 
+    console.log(`Generating ${prompts.length} lookbook images with ${refImages.length} reference faces...`);
+
+    // Generate images in batches of 4 (to avoid rate limits)
     const results = [];
     const batchSize = 4;
+
     for (let i = 0; i < prompts.length; i += batchSize) {
       const batch = prompts.slice(i, i + batchSize);
       const batchResults = await Promise.all(
@@ -142,14 +87,31 @@ app.post("/api/generate-looks", async (req, res) => {
           try {
             const response = await ai.models.generateContent({
               model: "gemini-2.0-flash-exp",
-              contents: [{ role: "user", parts: [...refImages, { text: prompt }] }],
-              config: { responseModalities: ["TEXT", "IMAGE"] },
+              contents: [
+                {
+                  role: "user",
+                  parts: [
+                    ...refImages,
+                    { text: prompt },
+                  ],
+                },
+              ],
+              config: {
+                responseModalities: ["TEXT", "IMAGE"],
+              },
             });
+
+            // Extract image from response
             for (const part of response.candidates?.[0]?.content?.parts || []) {
               if (part.inlineData) {
-                return { season, image: part.inlineData.data, mimeType: part.inlineData.mimeType };
+                return {
+                  season,
+                  image: part.inlineData.data,
+                  mimeType: part.inlineData.mimeType,
+                };
               }
             }
+            console.error(`No image in response for ${season}`);
             return null;
           } catch (e) {
             console.error(`Generation failed for ${season}:`, e.message);
@@ -161,19 +123,20 @@ app.post("/api/generate-looks", async (req, res) => {
     }
 
     const looks = results.filter(Boolean);
-    console.log(`Generated ${looks.length}/${prompts.length} images`);
+    console.log(`Generated ${looks.length}/${prompts.length} images successfully`);
 
+    // Group by season
     const grouped = {};
     for (const look of looks) {
       if (!grouped[look.season]) grouped[look.season] = [];
-      grouped[look.season].push({ image: `data:${look.mimeType};base64,${look.image}` });
+      grouped[look.season].push({
+        image: `data:${look.mimeType};base64,${look.image}`,
+      });
     }
+
     res.json({ looks: grouped });
   } catch (err) {
     console.error("Generation error:", err.message);
     res.status(500).json({ error: err.message });
   }
-});
-
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log("API server on http://localhost:" + PORT));
+}

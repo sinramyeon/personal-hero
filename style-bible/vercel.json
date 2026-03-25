@@ -1,8 +1,12 @@
 {
-    "functions": {
-      "api/analyze.js": {
-        "maxDuration": 60,
-        "memory": 1024
-      }
+  "functions": {
+    "api/analyze.js": {
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "api/generate-looks.js": {
+      "maxDuration": 120,
+      "memory": 1024
     }
   }
+}

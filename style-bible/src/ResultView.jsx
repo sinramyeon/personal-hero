@@ -1,7 +1,61 @@
+import { useState } from "react";
 import i18n from "./i18n";
 import "./ResultView.css";
 
-export default function ResultView({ result, onReanalyze, onContinue, lang }) {
+const SEASON_ORDER = {
+  kr: ["봄", "여름", "가을", "겨울"],
+  en: ["Spring", "Summer", "Fall", "Winter"],
+};
+const SEASON_EMOJI = { "봄": "🌸", "여름": "☀️", "가을": "🍂", "겨울": "❄️", "Spring": "🌸", "Summer": "☀️", "Fall": "🍂", "Winter": "❄️" };
+
+function LookbookSection({ looks, looksLoading, lang }) {
+  const [activeSeason, setActiveSeason] = useState(0);
+  const seasons = SEASON_ORDER[lang] || SEASON_ORDER.kr;
+
+  if (looksLoading) {
+    return (
+      <section className="result-section lookbook-section">
+        <h2 className="section-heading">{lang === "kr" ? "시즌별 룩북" : "Seasonal Lookbook"}</h2>
+        <div className="lookbook-loading">
+          <div className="lookbook-spinner" />
+          <p>{lang === "kr" ? "AI가 룩북을 생성하고 있어요..." : "AI is generating your lookbook..."}</p>
+        </div>
+      </section>
+    );
+  }
+
+  if (!looks || Object.keys(looks).length === 0) return null;
+
+  const currentImages = looks[seasons[activeSeason]] || [];
+
+  return (
+    <section className="result-section lookbook-section">
+      <h2 className="section-heading">{lang === "kr" ? "시즌별 룩북" : "Seasonal Lookbook"}</h2>
+      <div className="season-tabs">
+        {seasons.map((s, i) => (
+          <button key={s}
+            className={`season-tab ${i === activeSeason ? "active" : ""}`}
+            onClick={() => setActiveSeason(i)}>
+            <span className="season-emoji">{SEASON_EMOJI[s]}</span>
+            <span>{s}</span>
+          </button>
+        ))}
+      </div>
+      <div className="lookbook-grid">
+        {currentImages.map((look, i) => (
+          <div key={i} className="lookbook-item">
+            <img src={look.image} alt={`${seasons[activeSeason]} look ${i + 1}`} />
+          </div>
+        ))}
+        {currentImages.length === 0 && (
+          <p className="lookbook-empty">{lang === "kr" ? "이 시즌 이미지가 없어요" : "No images for this season"}</p>
+        )}
+      </div>
+    </section>
+  );
+}
+
+export default function ResultView({ result, onReanalyze, onContinue, lang, looks, looksLoading }) {
   if (!result) return null;
   const L = i18n[lang];
   const { personalColor, bodyType, styleRecommendation } = result;
@@ -94,6 +148,8 @@ export default function ResultView({ result, onReanalyze, onContinue, lang }) {
             </div>
           </section>
         )}
+
+        <LookbookSection looks={looks} looksLoading={looksLoading} lang={lang} />
 
         <div className="result-actions">
           <button className="reanalyze-btn" onClick={onReanalyze}>{L.btnReanalyze}</button>
