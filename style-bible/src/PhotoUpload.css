@@ -171,6 +171,12 @@
   color: #bbb;
   font-weight: 500;
 }
+.upload-privacy {
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  color: #ccc;
+  font-weight: 400;
+}
 .upload-error {
   margin-top: 0.75rem;
   padding: 10px 14px;

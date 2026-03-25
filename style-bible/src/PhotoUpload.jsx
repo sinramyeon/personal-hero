@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import i18n from "./i18n";
 import "./PhotoUpload.css";
 
@@ -100,6 +100,14 @@ export default function PhotoUpload({ onAnalyze, lang }) {
     finally { setLoading(false); }
   };
   
+  // Prevent accidental navigation during analysis
+  useEffect(() => {
+    if (!loading) return;
+    const handler = (e) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [loading]);
+
   const canNext = photos.length >= current.min;
   const isLast = step === STEPS.length - 1;
 
@@ -152,6 +160,7 @@ export default function PhotoUpload({ onAnalyze, lang }) {
         </div>
         <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleChange} style={{ display: "none" }} />
         <p className="upload-count">{photos.length}/{current.max}{L.uploadUnit}</p>
+        <p className="upload-privacy">{lang === "kr" ? "사진은 분석 후 즉시 삭제돼요" : "Photos are deleted after analysis"}</p>
         {error && <p className="upload-error">{error}</p>}
         <div className="btn-row">
           {step > 0 && <button className="back-btn" onClick={() => setStep(step - 1)}>{L.btnPrev}</button>}

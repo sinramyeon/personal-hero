@@ -1,59 +1,93 @@
-# ✦ Personal Style Bible (MVP)
+# Style Bible
 
-AI 기반 퍼스널 컬러 & 체형 분석 웹앱
+AI 기반 퍼스널 컬러 & 체형 분석 + 시즌별 룩북 생성 웹앱.
 
-사용자가 자신의 사진을 업로드하면
-AI가 얼굴, 피부톤, 체형, 분위기를 분석하여
-퍼스널 컬러 타입과 스타일 DNA를 도출하는 서비스입니다.
+## Tech Stack
 
----
+- **Frontend:** React 19 + Vite
+- **Auth:** Supabase (Google OAuth)
+- **DB:** Supabase PostgreSQL
+- **AI 분석:** Claude API (Anthropic) - 퍼스널 컬러, 체형, 스타일 추천
+- **AI 이미지:** Gemini API (Google) - 시즌별 룩북 생성
+- **배포:** Vercel (Serverless Functions)
+- **폰트:** Pretendard Variable
 
-## 🎯 What This App Does
+## 주요 기능
 
-1. 회원가입 / 로그인 (이메일 매직링크)
-2. 최소 2~5장의 사진 업로드
-3. AI(Claude Vision) 기반 분석
-4. 개인 스타일 분석 결과 JSON 생성
-5. 결과를 기반으로 향후 시즌별 스타일 생성 확장 예정
+1. Google 로그인
+2. 사진 업로드 (얼굴 2~3장, 전신 2~3장, 코디 2~3장)
+3. Claude AI 분석 → 퍼스널 컬러 / 체형 / 스타일 추천
+4. Gemini AI → 시즌별 룩북 이미지 4장 자동 생성 (봄/여름/가을/겨울)
+5. 결과 저장 (재로그인 시 이전 결과 자동 로드)
 
----
+## Setup
 
-## 🧠 AI Analysis Scope (Claude)
+### 환경변수
 
-업로드된 이미지를 기반으로 다음을 분석합니다:
+`style-bible/.env.local`:
 
-* Height estimate
-* Shoulder width impression
-* Body build (slim / athletic / soft / stocky)
-* Face shape
-* Skin undertone (warm / cool / neutral)
-* Contrast level
-* Hair description
-* 2 dominant style moods
-* Seasonal personal color suggestion
+```
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+CLAUDE_API_KEY=your_claude_api_key
+GEMINI_API_KEY=your_gemini_api_key
+```
 
-결과는 **strict JSON 형식**으로 반환됩니다.
+### Supabase 설정
 
----
+- Authentication > Providers > **Google** 활성화 (OAuth Client ID/Secret 필요)
+- `analysis_results` 테이블:
+  - `id` (uuid, PK)
+  - `user_id` (uuid, unique)
+  - `result` (jsonb)
+  - `looks` (jsonb, nullable)
+  - `updated_at` (timestamptz)
 
-## 🧱 Tech Stack
+### 로컬 개발
 
-Frontend:
+```bash
+cd style-bible
+npm install
+node server.js        # API 서버 (localhost:3001)
+npm run dev           # Vite 프론트엔드 (localhost:5176)
+```
 
-* Next.js
-* React
-* Deployed on Vercel
+### 배포
 
-Auth:
+```bash
+npm run build         # Vite 빌드
+vercel                # Vercel 배포
+```
 
-* Supabase (Email Magic Link)
+Vercel 환경변수에 `CLAUDE_API_KEY`, `GEMINI_API_KEY` 추가 필요.
 
-AI:
+## 프로젝트 구조
 
-* Claude Vision API (Anthropic)
+```
+style-bible/
+├── api/
+│   ├── analyze.js          # Claude 분석 (Vercel Serverless)
+│   └── generate-looks.js   # Gemini 룩북 생성 (Vercel Serverless)
+├── src/
+│   ├── App.jsx             # 메인 라우팅, 세션 관리
+│   ├── Auth.jsx            # Google 로그인
+│   ├── PhotoUpload.jsx     # 3단계 사진 업로드
+│   ├── ResultView.jsx      # 분석 결과 + 룩북 표시
+│   ├── supabaseClient.js   # Supabase 초기화
+│   └── i18n.js             # 한국어/영어 지원
+├── prompt.js               # Claude 시스템 프롬프트
+├── server.js               # 로컬 개발용 Express 서버
+└── vercel.json             # Vercel 함수 설정
+```
 
-Storage:
+## 비용 (1회 분석당)
 
-* 현재는 이미지 저장 없이 분석 후 폐기 (MVP 단계)
+| API | 용도 | 예상 비용 |
+|-----|------|----------|
+| Claude Sonnet | 분석 | ~$0.03-0.05 |
+| Gemini Flash | 룩북 4장 | ~$0.08-0.12 |
+| **합계** | | **~$0.11-0.17** |
 
----
+## Dev 참고
+
+- `/#/seol`, `/#/robe` — 개발용 스타일 바이블 샘플 (로그인 불필요)

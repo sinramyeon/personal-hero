@@ -82,8 +82,8 @@ export default function Auth({ lang, onToggleLang }) {
 
         <p className="auth-footer">
           {lang === "kr"
-            ? "Google 계정으로 간편하게 시작하세요"
-            : "Sign in quickly with your Google account"}
+            ? "사진은 분석 후 즉시 삭제되며, 서버에 저장되지 않아요"
+            : "Your photos are deleted right after analysis and never stored"}
         </p>
       </div>
     </div>
