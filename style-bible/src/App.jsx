@@ -4,9 +4,22 @@ import i18n from "./i18n";
 import Auth from "./Auth";
 import PhotoUpload from "./PhotoUpload";
 import ResultView from "./ResultView";
-import Seol from "./Seol";
-import Robe from "./Robe";
 import "./App.css";
+
+// Lazy load dev-only components
+const Seol = () => import("./Seol").then(m => m.default);
+const Robe = () => import("./Robe").then(m => m.default);
+
+function DevBible() {
+  const [Comp, setComp] = useState(null);
+  const hash = window.location.hash;
+  useEffect(() => {
+    if (hash === "#/seol") Seol().then(C => setComp(() => C));
+    else if (hash === "#/robe") Robe().then(C => setComp(() => C));
+  }, [hash]);
+  if (!Comp) return <div style={{ padding: "2rem", textAlign: "center", color: "#999" }}>Loading...</div>;
+  return <Comp />;
+}
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -14,10 +27,10 @@ export default function App() {
   const [result, setResult] = useState(null);
   const [looks, setLooks] = useState(null);
   const [looksLoading, setLooksLoading] = useState(false);
+  const [looksError, setLooksError] = useState(false);
+  const faceImagesRef = useRef(null);
   const [checking, setChecking] = useState(false);
   const [view, setView] = useState("upload");
-  const [activeTab, setActiveTab] = useState("seol");
-  const faceImagesRef = useRef(null);
   const [lang, setLang] = useState(() => {
     const saved = localStorage.getItem("sb-lang");
     if (saved) return saved;
@@ -25,8 +38,11 @@ export default function App() {
   });
 
   const L = i18n[lang];
-
   const toggleLang = (l) => { setLang(l); localStorage.setItem("sb-lang", l); };
+
+  // Dev-only routes: #/seol, #/robe
+  const hash = window.location.hash;
+  if (hash === "#/seol" || hash === "#/robe") return <DevBible />;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setLoading(false); });
@@ -68,6 +84,7 @@ export default function App() {
 
   const generateLooks = async (faceImages, analysisResult) => {
     setLooksLoading(true);
+    setLooksError(false);
     try {
       const res = await fetch("/api/generate-looks", {
         method: "POST",
@@ -75,20 +92,23 @@ export default function App() {
         body: JSON.stringify({ faceImages, analysisResult, lang }),
       });
       if (!res.ok) {
-        console.error("Looks generation failed:", (await res.json()).error);
+        const err = await res.json().catch(() => ({}));
+        console.error("Looks generation failed:", err.error);
+        setLooksError(true);
         return;
       }
       const { looks: generatedLooks } = await res.json();
       setLooks(generatedLooks);
       await saveResult(analysisResult, generatedLooks);
-    } catch (e) { console.error("Looks generation error:", e); }
+    } catch (e) {
+      console.error("Looks generation error:", e);
+      setLooksError(true);
+    }
     finally { setLooksLoading(false); }
   };
 
   const handleAnalyze = async (images) => {
-    // Save face images for lookbook generation
     faceImagesRef.current = images.face;
-
     const res = await fetch("/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -118,26 +138,12 @@ export default function App() {
   if (checking) return <div className="loading">{L.checkingResult}</div>;
 
   if (view === "upload") return <PhotoUpload onAnalyze={handleAnalyze} lang={lang} />;
-  if (view === "result") return (
-    <ResultView result={result} lang={lang}
-      looks={looks} looksLoading={looksLoading}
-      onReanalyze={handleReanalyze}
-      onContinue={() => setView("bible")} />
-  );
 
   return (
-    <div className="app-container">
-      <nav className="app-nav">
-        <div className="nav-left">
-          <button className={activeTab === "seol" ? "active" : ""} onClick={() => setActiveTab("seol")}>Seol</button>
-          <button className={activeTab === "robe" ? "active" : ""} onClick={() => setActiveTab("robe")}>Robe</button>
-        </div>
-        <div className="nav-right">
-          <button onClick={() => setView("result")}>{L.btnResults}</button>
-          <button onClick={handleLogout}>{L.btnLogout}</button>
-        </div>
-      </nav>
-      {activeTab === "seol" ? <Seol /> : <Robe />}
-    </div>
+    <ResultView result={result} lang={lang}
+      looks={looks} looksLoading={looksLoading} looksError={looksError}
+      onReanalyze={handleReanalyze}
+      onLogout={handleLogout}
+      onRetryLooks={faceImagesRef.current ? () => generateLooks(faceImagesRef.current, result) : null} />
   );
 }

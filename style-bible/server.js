@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import sharp from "sharp";
+import { GoogleGenAI } from "@google/genai";
 import { SYSTEM_PROMPT } from "./prompt.js";
 
 dotenv.config({ path: ".env.local" });
@@ -74,40 +75,19 @@ app.post("/api/analyze", async (req, res) => {
 });
 
 // --- Lookbook generation ---
-import { GoogleGenAI } from "@google/genai";
-
-function buildLookPrompts(analysisResult, lang) {
-  const kr = lang === "kr";
+function buildLookPrompts(analysisResult) {
   const { personalColor, bodyType } = analysisResult;
-  const season = personalColor?.season || "";
+  const colorSeason = personalColor?.season || "";
   const bodyDesc = bodyType?.type || "";
   const bestColors = personalColor?.bestColors?.join(", ") || "";
-  const baseContext = `This person's personal color is ${season}, body type is ${bodyDesc}. Their best colors are: ${bestColors}.`;
 
-  const seasons = kr
-    ? [
-        { name: "봄", scenes: ["벚꽃이 핀 공원에서 산책하는", "카페 테라스에서 브런치를 즐기는", "꽃시장을 구경하는"] },
-        { name: "여름", scenes: ["해변 근처 리조트에서", "여름 저녁 루프탑에서", "하얀 건물이 있는 지중해풍 거리에서"] },
-        { name: "가을", scenes: ["단풍이 든 파리 거리에서", "가을 공원 벤치 옆에서", "갤러리 오프닝에서"] },
-        { name: "겨울", scenes: ["눈 내리는 도시 거리에서", "고급 레스토랑에서 디너", "겨울 밤 일루미네이션 앞에서"] },
-      ]
-    : [
-        { name: "Spring", scenes: ["walking in a cherry blossom park", "at a cafe terrace having brunch", "browsing a flower market"] },
-        { name: "Summer", scenes: ["at a beachside resort", "on a rooftop bar in summer evening", "on a Mediterranean-style white street"] },
-        { name: "Fall", scenes: ["on a Paris street with autumn leaves", "near a park bench in fall", "at a gallery opening"] },
-        { name: "Winter", scenes: ["on a snowy city street", "at an upscale restaurant for dinner", "in front of winter illuminations"] },
-      ];
+  const seasons = ["Spring", "Summer", "Fall", "Winter"];
+  const base = `Keep this person's face and body exactly. Plain white background, no scenery. Full body visible head to toe, 1 person only, natural standing pose. Fashion lookbook style photo.`;
 
-  const prompts = [];
-  for (const s of seasons) {
-    for (const scene of s.scenes) {
-      const prompt = kr
-        ? `이 사람의 얼굴과 체형을 유지하면서, ${s.name} 시즌에 어울리는 ${season} 컬러 팔레트의 세련된 코디를 입고 ${scene} 모습을 전신 패션 룩북 사진으로 생성해주세요. 자연스러운 포즈, 패션 매거진 스타일, 전신이 보이는 사진. ${baseContext}`
-        : `Generate a full-body fashion lookbook photo of this person maintaining their face and body, wearing a stylish ${season} color palette outfit for ${s.name}, ${scene}. Natural pose, fashion magazine style, full body visible. ${baseContext}`;
-      prompts.push({ season: s.name, prompt });
-    }
-  }
-  return prompts;
+  return seasons.map(s => ({
+    season: s,
+    prompt: `${base} Wearing a stylish ${s} seasonal outfit using ${colorSeason} color palette (${bestColors}). Body type: ${bodyDesc}.`,
+  }));
 }
 
 app.post("/api/generate-looks", async (req, res) => {
@@ -118,7 +98,7 @@ app.post("/api/generate-looks", async (req, res) => {
     }
 
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const prompts = buildLookPrompts(analysisResult, lang || "kr");
+    const prompts = buildLookPrompts(analysisResult);
 
     const refImages = [];
     for (const img of faceImages.slice(0, 3)) {
@@ -141,7 +121,7 @@ app.post("/api/generate-looks", async (req, res) => {
         batch.map(async ({ season, prompt }) => {
           try {
             const response = await ai.models.generateContent({
-              model: "gemini-2.0-flash-exp",
+              model: "gemini-2.5-flash-image",
               contents: [{ role: "user", parts: [...refImages, { text: prompt }] }],
               config: { responseModalities: ["TEXT", "IMAGE"] },
             });
