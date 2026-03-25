@@ -60,6 +60,7 @@ export default function PhotoUpload({ onAnalyze, lang }) {
   const [allPhotos, setAllPhotos] = useState({ face: [], body: [], outfit: [] });
   const [allPreviews, setAllPreviews] = useState({ face: [], body: [], outfit: [] });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const inputRef = useRef(null);
   const current = STEPS[step];
   const photos = allPhotos[current.key];
@@ -71,7 +72,7 @@ export default function PhotoUpload({ onAnalyze, lang }) {
     for (const f of files) {
       if (up.length >= current.max) break;
       if (!f.type.startsWith("image/")) continue;
-      if (f.size > 5 * 1024 * 1024) { alert(f.name + " - " + L.sizeError); continue; }
+      if (f.size > 5 * 1024 * 1024) { setError(f.name + " - " + L.sizeError); continue; }
       up.push(f); upP.push(URL.createObjectURL(f));
     }
     setAllPhotos({ ...allPhotos, [key]: up });
@@ -87,19 +88,32 @@ export default function PhotoUpload({ onAnalyze, lang }) {
   };
   const handleSubmit = async () => {
     setLoading(true);
+    setError("");
     try {
       const images = {};
       for (const s of STEPS) {
         const results = await Promise.all(allPhotos[s.key].map(compressImage));
-        images[s.key] = results.filter(Boolean);  // null 제거
+        images[s.key] = results.filter(Boolean);
       }
       await onAnalyze(images);
-    } catch (err) { alert(L.uploadError + err.message); }
+    } catch (err) { setError(L.uploadError + err.message); }
     finally { setLoading(false); }
   };
   
   const canNext = photos.length >= current.min;
   const isLast = step === STEPS.length - 1;
+
+  if (loading) return (
+    <div className="upload-container">
+      <div className="upload-card" style={{ padding: "4rem 2rem" }}>
+        <div className="loader-wrap">
+          <div className="loader-spinner" />
+          <p className="loader-title">{L.btnAnalyzing}</p>
+          <p className="loader-sub">{lang === "kr" ? "AI가 사진을 분석하고 있어요" : "AI is analyzing your photos"}</p>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="upload-container">
@@ -138,6 +152,7 @@ export default function PhotoUpload({ onAnalyze, lang }) {
         </div>
         <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleChange} style={{ display: "none" }} />
         <p className="upload-count">{photos.length}/{current.max}{L.uploadUnit}</p>
+        {error && <p className="upload-error">{error}</p>}
         <div className="btn-row">
           {step > 0 && <button className="back-btn" onClick={() => setStep(step - 1)}>{L.btnPrev}</button>}
           {isLast ? (

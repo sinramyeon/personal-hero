@@ -13,7 +13,7 @@ function CBar({colors}){return (<div style={{display:"flex",gap:0,marginRight:8,
 
 function OCard({n,colors,desc,note}){
   return(<div style={{display:"flex",alignItems:"center",gap:10,padding:"9px 0",borderBottom:"1px solid #f0ece6"}}>
-    <span style={{fontSize:9,fontWeight:700,color:"#c0a880",minWidth:18,fontFamily:"'Karla',sans-serif"}}>{String(n).padStart(2,'0')}</span>
+    <span style={{fontSize:9,fontWeight:700,color:"#c0a880",minWidth:18,color:"#FF2D78"}}>{String(n).padStart(2,'0')}</span>
     <CBar colors={colors}/>
     <div style={{flex:1}}><div style={{fontSize:10.5,color:"#303030",lineHeight:1.5}}>{desc}</div>
     {note&&<div style={{fontSize:9,color:"#a8a098",marginTop:1}}>✦ {note}</div>}</div>
@@ -24,14 +24,14 @@ function Sec({title,emoji,children}){
   return(<div style={{marginBottom:20}}>
     <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:10}}>
       {emoji&&<span style={{fontSize:14}}>{emoji}</span>}
-      <div style={{fontSize:9.5,fontWeight:700,letterSpacing:2,color:"#c0a880",fontFamily:"'Karla',sans-serif"}}>{title}</div>
+      <div style={{fontSize:9.5,fontWeight:700,letterSpacing:2,color:"#c0a880",letterSpacing:2,color:"#FF2D78"}}>{title}</div>
     </div>
     {children}
   </div>);
 }
 
 function IRow({name,colors,emoji}){
-  return(<div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,marginBottom:3,background:"#faf8f5",border:"1px solid #f4f0ea"}}>
+  return(<div style={{display:"flex",alignItems:"center",gap:8,padding:"6px 8px",borderRadius:8,marginBottom:3,background:"#FFF8FA",border:"1px solid #FFE0EB"}}>
     {emoji&&<span style={{fontSize:11}}>{emoji}</span>}
     <div style={{display:"flex",gap:2}}>{colors.map((c,i)=><Dot key={i} c={C[c]} size={12}/>)}</div>
     <span style={{fontSize:10,color:"#404040",flex:1}}>{name}</span>
@@ -40,7 +40,7 @@ function IRow({name,colors,emoji}){
 
 function T({children}){return (<div style={{fontSize:10.5,color:"#404040",lineHeight:1.7,marginBottom:6}}>{children}</div>);}
 function B({children}){return (<strong style={{color:"#202020"}}>{children}</strong>);}
-function Tag({children,bg="#f8f0e8",color="#a08860"}){return (<span style={{padding:"3px 9px",borderRadius:20,fontSize:8.5,fontWeight:500,background:bg,color,display:"inline-block",margin:"2px 2px"}}>{children}</span>);}
+function Tag({children,bg="#FFF0F5",color="#FF2D78"}){return (<span style={{padding:"3px 9px",borderRadius:20,fontSize:8.5,fontWeight:500,background:bg,color,display:"inline-block",margin:"2px 2px"}}>{children}</span>);}
 
 /* ─── PROFILE ─── */
 function ProfileTab({lang}){
@@ -375,7 +375,7 @@ function GuideTab({lang}){
 const TABS_KR=["프로필","봄","여름","가을","겨울","출근","운동","옷장","가이드"];
 const TABS_EN=["Profile","Spring","Summer","Fall","Winter","Work","Exercise","Closet","Guide"];
 const TABS_EMOJI=["👤","🌸","☀️","🍂","❄️","💼","🏋️","🗄️","📖"];
-const TAB_COLORS=["#c0a880","#E8A0A8","#D94040","#C09868","#4068C0","#404040","#38B0A8","#7A5838","#c0a880"];
+const TAB_COLORS=["#FF2D78","#FF6B9D","#FF2D78","#E8256B","#FF2D78","#1a1a1a","#FF2D78","#1a1a1a","#FF2D78"];
 
 export default function Seol(){
   const [tab,setTab]=useState(0);
@@ -396,32 +396,30 @@ export default function Seol(){
   }};
 
   return(
-    <div style={{fontFamily:"'Karla','Noto Sans KR',sans-serif",maxWidth:480,margin:"0 auto",padding:"20px 14px 40px",background:"linear-gradient(180deg,#FDFCFA 0%,#F8F6F2 100%)",minHeight:"100vh"}}>
-      <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Karla:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <div style={{maxWidth:480,margin:"0 auto",padding:"20px 14px 40px",background:"#FFF0F5",minHeight:"100vh"}}>
 
       {/* HEADER */}
       <div style={{textAlign:"center",marginBottom:20}}>
         <div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:10}}>
           {["KR","EN"].map(l=><button key={l} onClick={()=>setLang(l.toLowerCase())} style={{
             padding:"4px 12px",border:"none",borderRadius:20,fontSize:9,fontWeight:700,cursor:"pointer",letterSpacing:1.5,
-            background:lang===l.toLowerCase()?"linear-gradient(135deg,#303030,#505050)":"transparent",
-            color:lang===l.toLowerCase()?"#fff":"#c0b8b0",transition:"all 0.2s",
+            background:lang===l.toLowerCase()?"#1a1a1a":"transparent",
+            color:lang===l.toLowerCase()?"#fff":"#ccc",transition:"all 0.2s",
           }}>{l}</button>)}
         </div>
-        <div style={{fontSize:8,fontWeight:600,letterSpacing:4,color:"#c0a880"}}>✦ PERSONAL STYLE BIBLE ✦</div>
-        <h1 style={{margin:"4px 0",fontSize:30,fontWeight:700,fontFamily:"'Cormorant Garamond',serif",color:"#202020"}}>Seol</h1>
-        <div style={{fontSize:9,color:"#b0a8a0"}}>{lang==="kr"?"18장 분석 · 봄 브라이트 · 베를린":"18 Photos · Spring Bright · Berlin"}</div>
+        <div style={{fontSize:8,fontWeight:700,letterSpacing:4,color:"#FF2D78"}}>PERSONAL STYLE BIBLE</div>
+        <h1 style={{margin:"4px 0",fontSize:28,fontWeight:800,color:"#1a1a1a",letterSpacing:"-0.5px"}}>Seol</h1>
+        <div style={{fontSize:9,color:"#bbb"}}>{lang==="kr"?"18장 분석 · 봄 브라이트 · 베를린":"18 Photos · Spring Bright · Berlin"}</div>
       </div>
 
       {/* TABS */}
-      <div style={{display:"flex",gap:2,marginBottom:18,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
+      <div style={{display:"flex",gap:3,marginBottom:18,overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
         {tabs.map((label,i)=>(
           <button key={i} onClick={()=>setTab(i)} style={{
-            padding:"7px 10px",border:"none",borderRadius:10,cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.2s",
+            padding:"7px 10px",border:"none",borderRadius:12,cursor:"pointer",whiteSpace:"nowrap",transition:"all 0.2s",
             fontSize:9.5,fontWeight:tab===i?700:500,
-            background:tab===i?`${TAB_COLORS[i]}18`:"transparent",
-            color:tab===i?TAB_COLORS[i]:"#b0a8a0",
-            fontFamily:"'Karla','Noto Sans KR',sans-serif",
+            background:tab===i?"#FF2D78":"white",
+            color:tab===i?"#fff":"#999",
           }}>
             <span style={{marginRight:3}}>{TABS_EMOJI[i]}</span>{label}
           </button>
@@ -429,11 +427,11 @@ export default function Seol(){
       </div>
 
       {/* CONTENT */}
-      <div style={{fontFamily:"'Noto Sans KR','Karla',sans-serif"}}>{content()}</div>
+      <div style={{background:"white",borderRadius:24,padding:"20px 16px"}}>{content()}</div>
 
       {/* FOOTER */}
-      <div style={{marginTop:28,textAlign:"center",fontSize:7,letterSpacing:3,color:"#d8d0c8"}}>
-        ✦ SPRING BRIGHT · WARM NEUTRAL · BERLIN 2026 ✦
+      <div style={{marginTop:28,textAlign:"center",fontSize:7,letterSpacing:3,color:"#ddd",fontWeight:600}}>
+        SPRING BRIGHT · WARM NEUTRAL · BERLIN 2026
       </div>
     </div>
   );

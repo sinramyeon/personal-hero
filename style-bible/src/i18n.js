@@ -2,10 +2,7 @@ const t = {
     kr: {
       authTitle: "Style Bible",
       authSubtitle: "AI 퍼스널 컬러 & 체형 분석",
-      authEmail: "이메일 주소",
-      authSend: "매직 링크 보내기",
-      authSent: "메일을 확인해주세요!",
-      authSentDesc: "로그인 링크를 보냈어요",
+      authLogin: "Google로 계속하기",
       authError: "오류가 발생했어요",
       faceTitle: "얼굴 사진",
       faceDesc: "정면 1장 + 측면 1장",
@@ -45,10 +42,7 @@ const t = {
     en: {
       authTitle: "Style Bible",
       authSubtitle: "AI Personal Color & Body Analysis",
-      authEmail: "Email address",
-      authSend: "Send Magic Link",
-      authSent: "Check your email!",
-      authSentDesc: "We sent you a login link",
+      authLogin: "Continue with Google",
       authError: "An error occurred",
       faceTitle: "Face Photos",
       faceDesc: "1 front-facing + 1 side profile",

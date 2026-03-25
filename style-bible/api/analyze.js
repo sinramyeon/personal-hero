@@ -2,29 +2,7 @@ export const config = { maxDuration: 60 };
 
 import Anthropic from "@anthropic-ai/sdk";
 import sharp from "sharp";
-
-const SYSTEM_PROMPT = `You are an expert personal color and body type analyst. Analyze the provided photos and return a JSON object with this exact structure (respond ONLY with valid JSON, no markdown):
-{
-  "personalColor": {
-    "season": "string (e.g. Spring Warm, Summer Cool, Autumn Warm, Winter Cool)",
-    "subtype": "string (e.g. Bright Spring, Soft Summer)",
-    "description": "string",
-    "bestColors": ["array of hex color codes"],
-    "worstColors": ["array of hex color codes"]
-  },
-  "bodyType": {
-    "type": "string",
-    "description": "string",
-    "strengths": ["array of strings"],
-    "tips": ["array of strings"]
-  },
-  "styleRecommendation": {
-    "summary": "string",
-    "doList": ["array of strings"],
-    "dontList": ["array of strings"]
-  }
-}
-Respond in the same language as the labels in the photos (Korean if Korean text visible, otherwise English). Be specific with hex codes and practical with style advice.`;
+import { SYSTEM_PROMPT } from "../prompt.js";
 
 async function toJpeg(base64Data) {
   const buf = Buffer.from(base64Data, "base64");
